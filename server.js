@@ -22,46 +22,5 @@
 // the Dexcom SGV data.
 'use strict';
 
-///////////////////////////////////////////////////
-// DB Connection setup and utils
-///////////////////////////////////////////////////
+require('./lib/server/server');
 
-var env = require('./env')( );
-
-
-///////////////////////////////////////////////////
-// setup http server
-///////////////////////////////////////////////////
-var PORT = env.PORT;
-
-function create (app) {
-  var transport = (env.ssl
-                ? require('https') : require('http'));
-  if (env.ssl) {
-    return transport.createServer(env.ssl, app);
-  }
-  return transport.createServer(app);
-}
-
-var bootevent = require('./lib/bootevent');
-bootevent(env).boot(function booted (ctx) {
-    env.store = ctx.store;
-    var app = require('./app')(env, ctx);
-    var server = create(app).listen(PORT);
-    console.log('listening', PORT);
-
-    if (env.MQTT_MONITOR) {
-      var mqtt = require('./lib/mqtt')(env, app.entries, app.devicestatus);
-      var es = require('event-stream');
-      es.pipeline(mqtt.entries, app.entries.map( ), mqtt.every(app.entries));
-    }
-
-    ///////////////////////////////////////////////////
-    // setup socket io for data and message transmission
-    ///////////////////////////////////////////////////
-    var websocket = require('./lib/websocket');
-    var io = websocket(env, server, app.entries, app.treatments, app.profiles, app.devicestatus);
-  })
-;
-
-///////////////////////////////////////////////////
